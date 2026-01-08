@@ -18,10 +18,9 @@ max_instances = 10
 # Access Configuration
 allow_unauthenticated = true
 
-# Environment Variables
+# Environment Variables (PORT is reserved by Cloud Run, don't set it here)
 env_vars = {
   NODE_ENV    = "staging"
-  PORT        = "3000"
   CORS_ORIGIN = "*"
 }
 
