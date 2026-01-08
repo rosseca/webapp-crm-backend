@@ -1,7 +1,21 @@
 steps:
+  # Step 0: Create Terraform state bucket if it doesn't exist
+  - name: 'gcr.io/cloud-builders/gcloud'
+    id: Create State Bucket
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        gcloud storage buckets describe gs://${_TF_STATE_BUCKET} 2>/dev/null || \
+        gcloud storage buckets create gs://${_TF_STATE_BUCKET} \
+          --location=${_REGION} \
+          --uniform-bucket-level-access
+
   # Step 1: Run Terraform to create Artifact Registry and grant permissions
   - name: gcr.io/${PROJECT_ID}/terraform
     id: Setup Infrastructure
+    waitFor:
+      - Create State Bucket
     entrypoint: 'bash'
     env:
       - _ENVIRONMENT=${_ENVIRONMENT}
@@ -103,6 +117,7 @@ substitutions:
   _SERVICE_NAME: leadtech-crm-backend
   _ARTIFACT_REPO: leadtech-crm
   _REGION: europe-west1
+  _TF_STATE_BUCKET: leadtech-crm-tf-state
 
 # Use Cloud Logging to store the logs from the execution
 options:
