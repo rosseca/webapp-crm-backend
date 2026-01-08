@@ -29,19 +29,6 @@ resource "google_project_service" "apis" {
   disable_on_destroy = false
 }
 
-# NOTE: Artifact Registry repository must be created manually by an admin:
-# gcloud artifacts repositories create leadtech-crm \
-#   --repository-format=docker \
-#   --location=europe-west1 \
-#   --project=wa-aichat-test
-#
-# And grant push permission:
-# gcloud artifacts repositories add-iam-policy-binding leadtech-crm \
-#   --location=europe-west1 \
-#   --member="serviceAccount:1038920093558-compute@developer.gserviceaccount.com" \
-#   --role="roles/artifactregistry.writer" \
-#   --project=wa-aichat-test
-
 # Create service account for Cloud Run
 resource "google_service_account" "crm_backend_sa" {
   account_id   = "${var.environment}-crm-backend-sa"
@@ -99,7 +86,7 @@ resource "google_cloud_run_v2_service" "crm_backend" {
     }
 
     containers {
-      image = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_repo}/${var.service_name}:${var.image_tag}"
+      image = "gcr.io/${var.project_id}/${var.service_name}:${var.image_tag}"
 
       ports {
         container_port = 3000

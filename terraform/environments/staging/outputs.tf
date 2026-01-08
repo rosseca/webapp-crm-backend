@@ -13,7 +13,7 @@ output "service_account_email" {
   value       = google_service_account.crm_backend_sa.email
 }
 
-output "artifact_registry_repository" {
-  description = "Artifact Registry repository URL"
-  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_repo}"
+output "container_registry" {
+  description = "Google Container Registry URL"
+  value       = "gcr.io/${var.project_id}/${var.service_name}"
 }

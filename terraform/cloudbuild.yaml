@@ -11,27 +11,27 @@ steps:
           --location=${_REGION} \
           --uniform-bucket-level-access
 
-  # Step 1: Build Docker image
+  # Step 1: Build Docker image (using GCR instead of Artifact Registry)
   - name: 'gcr.io/cloud-builders/docker'
     id: Build Docker Image
     args:
       - 'build'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_SERVICE_NAME}:${SHORT_SHA}'
+      - 'gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:${SHORT_SHA}'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_SERVICE_NAME}:latest'
+      - 'gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:latest'
       - '.'
     dir: .
     waitFor:
       - Create State Bucket
 
-  # Step 2: Push Docker image to Artifact Registry
+  # Step 2: Push Docker image to Google Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: Push Docker Image
     args:
       - 'push'
       - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_SERVICE_NAME}'
+      - 'gcr.io/${PROJECT_ID}/${_SERVICE_NAME}'
     waitFor:
       - Build Docker Image
 
