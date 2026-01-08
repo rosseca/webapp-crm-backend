@@ -1,7 +1,8 @@
 # Project Configuration
-project_id    = "leadtech-crm-dev"  # Replace with your GCP project ID
-region        = "europe-west1"
-environment   = "staging"
+project_id     = "wa-aichat-test"
+project_number = "1038920093558"
+region         = "europe-west1"
+environment    = "staging"
 
 # Cloud Run Configuration
 service_name  = "leadtech-crm-backend"

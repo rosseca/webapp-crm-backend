@@ -67,6 +67,19 @@ resource "google_artifact_registry_repository" "crm_repo" {
   depends_on = [google_project_service.apis]
 }
 
+# Grant Cloud Build (Compute Engine default SA) permission to push to Artifact Registry
+resource "google_artifact_registry_repository_iam_member" "cloudbuild_writer" {
+  provider = google-beta
+
+  project    = var.project_id
+  location   = var.region
+  repository = google_artifact_registry_repository.crm_repo.name
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${var.project_number}-compute@developer.gserviceaccount.com"
+
+  depends_on = [google_artifact_registry_repository.crm_repo]
+}
+
 # Create service account for Cloud Run
 resource "google_service_account" "crm_backend_sa" {
   account_id   = "${var.environment}-crm-backend-sa"
