@@ -8,11 +8,6 @@ output "service_name" {
   value       = google_cloud_run_v2_service.crm_backend.name
 }
 
-output "service_account_email" {
-  description = "Email of the service account"
-  value       = google_service_account.crm_backend_sa.email
-}
-
 output "container_registry" {
   description = "Google Container Registry URL"
   value       = "gcr.io/${var.project_id}/${var.service_name}"

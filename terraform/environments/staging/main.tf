@@ -13,14 +13,7 @@ provider "google-beta" {
 resource "google_project_service" "apis" {
   provider = google-beta
   for_each = toset([
-    "serviceusage.googleapis.com",       # Service Usage API
     "run.googleapis.com",                # Cloud Run service
-    "cloudbuild.googleapis.com",         # Required for deployments
-    "artifactregistry.googleapis.com",   # Container image storage
-    "cloudresourcemanager.googleapis.com", # Resource management
-    "secretmanager.googleapis.com",      # Secret storage
-    "firebase.googleapis.com",           # Firebase services
-    "iam.googleapis.com",                # IAM management
   ])
 
   project = var.project_id
@@ -29,56 +22,15 @@ resource "google_project_service" "apis" {
   disable_on_destroy = false
 }
 
-# Create service account for Cloud Run
-resource "google_service_account" "crm_backend_sa" {
-  account_id   = "${var.environment}-crm-backend-sa"
-  display_name = "${var.environment}-crm-backend-sa"
-  project      = var.project_id
-
-  depends_on = [google_project_service.apis]
-}
-
-# IAM roles for service account
-resource "google_project_iam_member" "secret_manager_accessor" {
-  project = var.project_id
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${google_service_account.crm_backend_sa.email}"
-
-  depends_on = [google_service_account.crm_backend_sa]
-}
-
-resource "google_project_iam_member" "logging_log_writer" {
-  project = var.project_id
-  role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${google_service_account.crm_backend_sa.email}"
-
-  depends_on = [google_service_account.crm_backend_sa]
-}
-
-resource "google_project_iam_member" "firebase_admin" {
-  project = var.project_id
-  role    = "roles/firebase.admin"
-  member  = "serviceAccount:${google_service_account.crm_backend_sa.email}"
-
-  depends_on = [google_service_account.crm_backend_sa]
-}
-
-resource "google_project_iam_member" "datastore_user" {
-  project = var.project_id
-  role    = "roles/datastore.user"
-  member  = "serviceAccount:${google_service_account.crm_backend_sa.email}"
-
-  depends_on = [google_service_account.crm_backend_sa]
-}
-
-# Cloud Run service
+# Cloud Run service (using default compute service account)
 resource "google_cloud_run_v2_service" "crm_backend" {
   name     = var.service_name
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
-    service_account = google_service_account.crm_backend_sa.email
+    # Use default compute service account
+    service_account = "${var.project_number}-compute@developer.gserviceaccount.com"
 
     scaling {
       min_instance_count = var.min_instances
@@ -153,13 +105,11 @@ resource "google_cloud_run_v2_service" "crm_backend" {
   }
 
   depends_on = [
-    google_project_service.apis,
-    google_service_account.crm_backend_sa,
-    google_project_iam_member.secret_manager_accessor
+    google_project_service.apis
   ]
 }
 
-# Allow unauthenticated access (public API) - Optional, remove if you want authenticated access only
+# Allow unauthenticated access (public API)
 resource "google_cloud_run_v2_service_iam_member" "public_access" {
   count = var.allow_unauthenticated ? 1 : 0
 
