@@ -7,6 +7,13 @@ fi
 
 notify_google_chat() {
   local status="$1"
+
+  # Skip notification if webhook URL is not configured
+  if [ -z "${_CHAT_WEBHOOK_URL}" ]; then
+    echo "Skipping notification: _CHAT_WEBHOOK_URL is not configured"
+    return 0
+  fi
+
   local title="Deploy Status Unknown"
 
   if [ "$status" = "SUCCESS" ]; then
