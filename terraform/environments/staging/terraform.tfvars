@@ -1,0 +1,38 @@
+# Project Configuration
+project_id    = "leadtech-crm-dev"  # Replace with your GCP project ID
+region        = "europe-west1"
+environment   = "staging"
+
+# Cloud Run Configuration
+service_name  = "leadtech-crm-backend"
+artifact_repo = "leadtech-crm"
+image_tag     = "latest"
+
+# Resource Configuration
+cpu           = "1"
+memory        = "512Mi"
+min_instances = 0
+max_instances = 10
+
+# Access Configuration
+allow_unauthenticated = true
+
+# Environment Variables
+env_vars = {
+  NODE_ENV    = "staging"
+  PORT        = "3000"
+  CORS_ORIGIN = "*"
+}
+
+# Secret Environment Variables (from Secret Manager)
+# Uncomment and configure as needed:
+# secret_env_vars = {
+#   FIREBASE_CREDENTIALS = {
+#     secret_name = "firebase-admin-credentials"
+#     version     = "latest"
+#   }
+#   DATABASE_URL = {
+#     secret_name = "database-url"
+#     version     = "latest"
+#   }
+# }

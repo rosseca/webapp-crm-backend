@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.gitignore
+*.md
+.env
+.env.*
+.eslintrc.js
+.prettierrc
+test
+*.spec.ts
+coverage
+.idea
+.vscode
+terraform

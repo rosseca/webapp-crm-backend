@@ -1,0 +1,86 @@
+steps:
+  # Step 1: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Build Docker Image
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_SERVICE_NAME}:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_SERVICE_NAME}:latest'
+      - '.'
+    dir: .
+
+  # Step 2: Push Docker image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Push Docker Image
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_SERVICE_NAME}'
+    waitFor:
+      - Build Docker Image
+
+  # Step 3: Execute Terraform
+  - name: gcr.io/${PROJECT_ID}/terraform
+    id: Execute Terraform
+    entrypoint: 'bash'
+    env:
+      - _CHAT_WEBHOOK_URL=${_CHAT_WEBHOOK_URL}
+      - _ENVIRONMENT=${_ENVIRONMENT}
+      - _SERVICE_NAME=${_SERVICE_NAME}
+      - _ARTIFACT_REPO=${_ARTIFACT_REPO}
+      - _REGION=${_REGION}
+      - REPO_NAME=${REPO_NAME}
+      - REPO_FULL_NAME=${REPO_FULL_NAME}
+      - BUILD_ID=${BUILD_ID}
+      - PROJECT_ID=${PROJECT_ID}
+      - BRANCH_NAME=${BRANCH_NAME}
+      - SHORT_SHA=${SHORT_SHA}
+      - LOCATION=${LOCATION}
+    args:
+      - '-c'
+      - |
+        source /workspace/terraform/scripts/utils.sh
+
+        cd environments/${_ENVIRONMENT}
+        run_or_fail terraform init -upgrade
+        run_or_fail terraform apply -auto-approve \
+          -var="image_tag=${SHORT_SHA}"
+    dir: terraform
+    waitFor:
+      - Push Docker Image
+
+  # Step 4: Notify result on Google Chat
+  - name: 'gcr.io/cloud-builders/curl'
+    id: Notify result on GoogleChat
+    entrypoint: bash
+    env:
+      - _CHAT_WEBHOOK_URL=${_CHAT_WEBHOOK_URL}
+      - _ENVIRONMENT=${_ENVIRONMENT}
+      - REPO_NAME=${REPO_NAME}
+      - REPO_FULL_NAME=${REPO_FULL_NAME}
+      - BUILD_ID=${BUILD_ID}
+      - PROJECT_ID=${PROJECT_ID}
+      - BRANCH_NAME=${BRANCH_NAME}
+      - SHORT_SHA=${SHORT_SHA}
+      - LOCATION=${LOCATION}
+    waitFor:
+      - Execute Terraform
+    args:
+      - -c
+      - |
+        source /workspace/terraform/scripts/utils.sh
+
+        notify_google_chat "SUCCESS"
+
+# Substitution variables (can be overridden in trigger configuration)
+substitutions:
+  _ENVIRONMENT: staging
+  _SERVICE_NAME: leadtech-crm-backend
+  _ARTIFACT_REPO: leadtech-crm
+  _REGION: europe-west1
+
+# Use Cloud Logging to store the logs from the execution
+options:
+  logging: CLOUD_LOGGING_ONLY
