@@ -15,5 +15,5 @@ output "service_account_email" {
 
 output "artifact_registry_repository" {
   description = "Artifact Registry repository URL"
-  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.crm_repo.repository_id}"
+  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_repo}"
 }

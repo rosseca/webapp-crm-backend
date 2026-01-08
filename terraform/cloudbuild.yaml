@@ -11,28 +11,7 @@ steps:
           --location=${_REGION} \
           --uniform-bucket-level-access
 
-  # Step 1: Run Terraform to create Artifact Registry and grant permissions
-  - name: gcr.io/${PROJECT_ID}/terraform
-    id: Setup Infrastructure
-    waitFor:
-      - Create State Bucket
-    entrypoint: 'bash'
-    env:
-      - _ENVIRONMENT=${_ENVIRONMENT}
-      - PROJECT_ID=${PROJECT_ID}
-    args:
-      - '-c'
-      - |
-        cd environments/${_ENVIRONMENT}
-        terraform init -upgrade
-        # Only create the Artifact Registry and IAM permissions first
-        terraform apply -auto-approve \
-          -target=google_project_service.apis \
-          -target=google_artifact_registry_repository.crm_repo \
-          -target=google_artifact_registry_repository_iam_member.cloudbuild_writer
-    dir: terraform
-
-  # Step 2: Build Docker image
+  # Step 1: Build Docker image
   - name: 'gcr.io/cloud-builders/docker'
     id: Build Docker Image
     args:
@@ -44,9 +23,9 @@ steps:
       - '.'
     dir: .
     waitFor:
-      - Setup Infrastructure
+      - Create State Bucket
 
-  # Step 3: Push Docker image to Artifact Registry
+  # Step 2: Push Docker image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: Push Docker Image
     args:
@@ -56,7 +35,7 @@ steps:
     waitFor:
       - Build Docker Image
 
-  # Step 4: Deploy to Cloud Run via Terraform
+  # Step 3: Deploy to Cloud Run via Terraform
   - name: gcr.io/${PROJECT_ID}/terraform
     id: Deploy Cloud Run
     entrypoint: 'bash'
@@ -86,7 +65,7 @@ steps:
     waitFor:
       - Push Docker Image
 
-  # Step 5: Notify result on Google Chat
+  # Step 4: Notify result on Google Chat
   - name: 'gcr.io/cloud-builders/curl'
     id: Notify result on GoogleChat
     entrypoint: bash

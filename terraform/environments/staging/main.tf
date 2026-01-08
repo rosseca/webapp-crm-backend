@@ -29,30 +29,18 @@ resource "google_project_service" "apis" {
   disable_on_destroy = false
 }
 
-# Create Artifact Registry repository for Docker images
-resource "google_artifact_registry_repository" "crm_repo" {
-  provider = google-beta
-
-  location      = var.region
-  repository_id = var.artifact_repo
-  description   = "Docker repository for LeadTech CRM Backend"
-  format        = "DOCKER"
-
-  depends_on = [google_project_service.apis]
-}
-
-# Grant Cloud Build (Compute Engine default SA) permission to push to Artifact Registry
-resource "google_artifact_registry_repository_iam_member" "cloudbuild_writer" {
-  provider = google-beta
-
-  project    = var.project_id
-  location   = var.region
-  repository = google_artifact_registry_repository.crm_repo.name
-  role       = "roles/artifactregistry.writer"
-  member     = "serviceAccount:${var.project_number}-compute@developer.gserviceaccount.com"
-
-  depends_on = [google_artifact_registry_repository.crm_repo]
-}
+# NOTE: Artifact Registry repository must be created manually by an admin:
+# gcloud artifacts repositories create leadtech-crm \
+#   --repository-format=docker \
+#   --location=europe-west1 \
+#   --project=wa-aichat-test
+#
+# And grant push permission:
+# gcloud artifacts repositories add-iam-policy-binding leadtech-crm \
+#   --location=europe-west1 \
+#   --member="serviceAccount:1038920093558-compute@developer.gserviceaccount.com" \
+#   --role="roles/artifactregistry.writer" \
+#   --project=wa-aichat-test
 
 # Create service account for Cloud Run
 resource "google_service_account" "crm_backend_sa" {
@@ -179,7 +167,6 @@ resource "google_cloud_run_v2_service" "crm_backend" {
 
   depends_on = [
     google_project_service.apis,
-    google_artifact_registry_repository.crm_repo,
     google_service_account.crm_backend_sa,
     google_project_iam_member.secret_manager_accessor
   ]
