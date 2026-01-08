@@ -1,4 +1,20 @@
 steps:
+  # Step 0: Create Artifact Registry repository if it doesn't exist
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: Create Artifact Registry
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        gcloud artifacts repositories describe ${_ARTIFACT_REPO} \
+          --location=${_REGION} \
+          --project=${PROJECT_ID} 2>/dev/null || \
+        gcloud artifacts repositories create ${_ARTIFACT_REPO} \
+          --repository-format=docker \
+          --location=${_REGION} \
+          --project=${PROJECT_ID} \
+          --description="Docker repository for LeadTech CRM Backend"
+
   # Step 1: Build Docker image
   - name: 'gcr.io/cloud-builders/docker'
     id: Build Docker Image
@@ -10,6 +26,8 @@ steps:
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPO}/${_SERVICE_NAME}:latest'
       - '.'
     dir: .
+    waitFor:
+      - Create Artifact Registry
 
   # Step 2: Push Docker image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
