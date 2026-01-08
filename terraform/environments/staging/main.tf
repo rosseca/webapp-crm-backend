@@ -9,35 +9,11 @@ provider "google-beta" {
   region  = var.region
 }
 
-# Enable Service Usage API first
-resource "google_project_service" "service_usage_api" {
-  provider = google-beta
-  project  = var.project_id
-  service  = "serviceusage.googleapis.com"
-
-  disable_dependent_services = false
-  disable_on_destroy         = false
-
-  timeouts {
-    create = "30m"
-    update = "40m"
-  }
-}
-
-# Enable Service Usage API using a null_resource and local-exec for the first time only
-resource "null_resource" "enable_service_usage_api" {
-  provisioner "local-exec" {
-    command = "gcloud services enable serviceusage.googleapis.com --project ${var.project_id}"
-  }
-  triggers = {
-    project_id = var.project_id
-  }
-}
-
-# Wait for the Service Usage API to be enabled before enabling other services
+# Enable required APIs
 resource "google_project_service" "apis" {
   provider = google-beta
   for_each = toset([
+    "serviceusage.googleapis.com",       # Service Usage API
     "run.googleapis.com",                # Cloud Run service
     "cloudbuild.googleapis.com",         # Required for deployments
     "artifactregistry.googleapis.com",   # Container image storage
@@ -51,8 +27,6 @@ resource "google_project_service" "apis" {
   service = each.key
 
   disable_on_destroy = false
-
-  depends_on = [null_resource.enable_service_usage_api]
 }
 
 # Create Artifact Registry repository for Docker images

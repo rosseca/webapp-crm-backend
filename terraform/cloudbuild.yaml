@@ -27,8 +27,6 @@ steps:
         terraform init -upgrade
         # Only create the Artifact Registry and IAM permissions first
         terraform apply -auto-approve \
-          -target=null_resource.enable_service_usage_api \
-          -target=google_project_service.service_usage_api \
           -target=google_project_service.apis \
           -target=google_artifact_registry_repository.crm_repo \
           -target=google_artifact_registry_repository_iam_member.cloudbuild_writer
