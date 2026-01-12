@@ -4,6 +4,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { HttpClientModule } from './common/http/http-client.module';
+import { UsersModule } from './users/users.module';
+import { TransactionsModule } from './transactions/transactions.module';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { HttpClientModule } from './common/http/http-client.module';
     }),
     HttpClientModule,
     AuthModule,
+    UsersModule,
+    TransactionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
