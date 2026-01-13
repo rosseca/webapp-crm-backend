@@ -17,7 +17,29 @@ steps:
           }
         fi
 
-  # Step 1: Build Docker image (using GCR instead of Artifact Registry)
+  # Step 1: Build Terraform Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Build Terraform Image
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/${PROJECT_ID}/terraform:latest'
+      - '-f'
+      - 'terraform/Dockerfile'
+      - 'terraform'
+    waitFor:
+      - Create State Bucket
+
+  # Step 2: Push Terraform image to GCR
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Push Terraform Image
+    args:
+      - 'push'
+      - 'gcr.io/${PROJECT_ID}/terraform:latest'
+    waitFor:
+      - Build Terraform Image
+
+  # Step 3: Build App Docker image (using GCR instead of Artifact Registry)
   - name: 'gcr.io/cloud-builders/docker'
     id: Build Docker Image
     args:
@@ -31,7 +53,7 @@ steps:
     waitFor:
       - Create State Bucket
 
-  # Step 2: Push Docker image to Google Container Registry
+  # Step 4: Push Docker image to Google Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: Push Docker Image
     args:
@@ -41,7 +63,7 @@ steps:
     waitFor:
       - Build Docker Image
 
-  # Step 3: Deploy to Cloud Run via Terraform
+  # Step 5: Deploy to Cloud Run via Terraform
   - name: gcr.io/${PROJECT_ID}/terraform
     id: Deploy Cloud Run
     entrypoint: 'bash'
@@ -70,8 +92,9 @@ steps:
     dir: terraform
     waitFor:
       - Push Docker Image
+      - Push Terraform Image
 
-  # Step 4: Notify result on Google Chat
+  # Step 6: Notify result on Google Chat
   - name: 'gcr.io/cloud-builders/curl'
     id: Notify result on GoogleChat
     entrypoint: bash
