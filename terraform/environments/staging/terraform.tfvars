@@ -16,9 +16,7 @@ min_instances = 0
 max_instances = 10
 
 # Access Configuration
-# Set to false because Cloud Build SA doesn't have run.services.setIamPolicy permission
-# To enable public access, grant roles/run.admin to the Cloud Build service account
-allow_unauthenticated = false
+allow_unauthenticated = true
 
 # Environment Variables (PORT is reserved by Cloud Run, don't set it here)
 env_vars = {
