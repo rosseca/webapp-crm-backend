@@ -6,10 +6,16 @@ steps:
     args:
       - '-c'
       - |
-        gcloud storage buckets describe gs://${_TF_STATE_BUCKET} 2>/dev/null || \
-        gcloud storage buckets create gs://${_TF_STATE_BUCKET} \
-          --location=${_REGION} \
-          --uniform-bucket-level-access
+        if gcloud storage buckets describe gs://${_TF_STATE_BUCKET} > /dev/null 2>&1; then
+          echo "Bucket gs://${_TF_STATE_BUCKET} already exists, skipping creation"
+        else
+          echo "Creating bucket gs://${_TF_STATE_BUCKET}..."
+          gcloud storage buckets create gs://${_TF_STATE_BUCKET} \
+            --location=${_REGION} \
+            --uniform-bucket-level-access || {
+            echo "Warning: Could not create bucket (it may already exist)"
+          }
+        fi
 
   # Step 1: Build Docker image (using GCR instead of Artifact Registry)
   - name: 'gcr.io/cloud-builders/docker'
