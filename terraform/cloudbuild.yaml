@@ -6,16 +6,33 @@ steps:
     args:
       - '-c'
       - |
-        if gcloud storage buckets describe gs://${_TF_STATE_BUCKET} > /dev/null 2>&1; then
-          echo "Bucket gs://${_TF_STATE_BUCKET} already exists, skipping creation"
+        BUCKET_NAME="${PROJECT_ID}-tf-state"
+        echo "Using bucket: gs://${BUCKET_NAME}"
+
+        # Check if bucket exists and is accessible
+        if gcloud storage buckets describe gs://${BUCKET_NAME} > /dev/null 2>&1; then
+          echo "Bucket gs://${BUCKET_NAME} already exists and is accessible"
         else
-          echo "Creating bucket gs://${_TF_STATE_BUCKET}..."
-          gcloud storage buckets create gs://${_TF_STATE_BUCKET} \
+          echo "Creating bucket gs://${BUCKET_NAME}..."
+          gcloud storage buckets create gs://${BUCKET_NAME} \
             --location=${_REGION} \
-            --uniform-bucket-level-access || {
-            echo "Warning: Could not create bucket (it may already exist)"
-          }
+            --uniform-bucket-level-access
         fi
+
+        # Grant Cloud Build service account access to the bucket
+        PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')
+        CB_SA="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
+        COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+
+        echo "Granting Storage Admin to Cloud Build SA: ${CB_SA}"
+        gcloud storage buckets add-iam-policy-binding gs://${BUCKET_NAME} \
+          --member="serviceAccount:${CB_SA}" \
+          --role="roles/storage.admin" || true
+
+        echo "Granting Storage Admin to Compute SA: ${COMPUTE_SA}"
+        gcloud storage buckets add-iam-policy-binding gs://${BUCKET_NAME} \
+          --member="serviceAccount:${COMPUTE_SA}" \
+          --role="roles/storage.admin" || true
 
   # Step 1: Build Terraform Docker image
   - name: 'gcr.io/cloud-builders/docker'
@@ -86,7 +103,8 @@ steps:
         source /workspace/terraform/scripts/utils.sh
 
         cd environments/${_ENVIRONMENT}
-        run_or_fail terraform init -upgrade
+        run_or_fail terraform init -upgrade \
+          -backend-config="bucket=${PROJECT_ID}-tf-state"
         run_or_fail terraform apply -auto-approve \
           -var="image_tag=${SHORT_SHA}"
     dir: terraform
@@ -123,7 +141,6 @@ substitutions:
   _SERVICE_NAME: leadtech-crm-backend
   _ARTIFACT_REPO: leadtech-crm
   _REGION: europe-west1
-  _TF_STATE_BUCKET: leadtech-crm-tf-state
 
 # Use Cloud Logging to store the logs from the execution
 options:

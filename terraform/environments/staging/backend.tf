@@ -13,7 +13,8 @@ terraform {
   }
 
   backend "gcs" {
-    bucket = "leadtech-crm-tf-state"
+    # Bucket is configured dynamically via -backend-config in CI/CD
+    # Use: terraform init -backend-config="bucket=${PROJECT_ID}-tf-state"
     prefix = "staging/state"
   }
 }
