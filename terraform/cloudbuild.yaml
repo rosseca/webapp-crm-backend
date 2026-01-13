@@ -34,6 +34,9 @@ steps:
           --member="serviceAccount:$${COMPUTE_SA}" \
           --role="roles/storage.admin" || true
 
+        # Write project number to file for later steps
+        echo "$${PROJECT_NUMBER}" > /workspace/.project_number
+
   # Step 1: Build Terraform Docker image
   - name: 'gcr.io/cloud-builders/docker'
     id: Build Terraform Image
@@ -102,10 +105,15 @@ steps:
       - |
         source /workspace/terraform/scripts/utils.sh
 
+        # Read project number from file written by Step 0
+        PROJECT_NUM=$$(cat /workspace/.project_number)
+
         cd environments/${_ENVIRONMENT}
         run_or_fail terraform init -upgrade \
           -backend-config="bucket=${PROJECT_ID}-tf-state"
         run_or_fail terraform apply -auto-approve \
+          -var="project_id=${PROJECT_ID}" \
+          -var="project_number=$${PROJECT_NUM}" \
           -var="image_tag=${SHORT_SHA}"
     dir: terraform
     waitFor:
