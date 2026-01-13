@@ -5,12 +5,14 @@ import { AUTH_REPOSITORY, IAuthRepository } from './auth.repository.interface';
 import { AuthRepository, AUTH_API_CONFIG } from './auth.repository';
 import { FirebaseAuthRepository } from './firebase-auth.repository';
 import { PrismaAuthRepository } from './prisma-auth.repository';
+import { BaasAuthRepository, BAAS_API_CONFIG } from './baas-auth.repository';
 import { ApiRepositoryConfig } from '../../common/repositories/base-api.repository';
 
 export enum AuthProviderType {
   API = 'api',
   FIREBASE = 'firebase',
   PRISMA = 'prisma',
+  BAAS = 'baas',
 }
 
 const logger = new Logger('AuthRepositoryFactory');
@@ -39,6 +41,19 @@ export const AuthRepositoryFactory: Provider = {
         // When you set up PrismaService, inject it here:
         // return new PrismaAuthRepository(prismaService);
         return new PrismaAuthRepository();
+
+      case AuthProviderType.BAAS:
+        logger.log('Using BAAS Auth repository');
+        const baasConfig: ApiRepositoryConfig = {
+          baseUrl: configService.get<string>(
+            'CHATAI_API_URL',
+            'http://localhost:5001/your-project-id/us-central1/api',
+          ),
+          timeout: configService.get<number>('CHATAI_API_TIMEOUT', 10000),
+          retryAttempts: 3,
+          headers: {},
+        };
+        return new BaasAuthRepository(httpService, baasConfig);
 
       case AuthProviderType.API:
       default:
@@ -72,5 +87,22 @@ export const AuthApiConfigProvider: Provider = {
     headers: {
       'X-API-Key': configService.get<string>('AUTH_API_KEY', ''),
     },
+  }),
+};
+
+/**
+ * Provider for BAAS API config
+ */
+export const BaasApiConfigProvider: Provider = {
+  provide: BAAS_API_CONFIG,
+  inject: [ConfigService],
+  useFactory: (configService: ConfigService): ApiRepositoryConfig => ({
+    baseUrl: configService.get<string>(
+      'CHATAI_API_URL',
+      'http://localhost:5001/your-project-id/us-central1/api',
+    ),
+    timeout: configService.get<number>('CHATAI_API_TIMEOUT', 10000),
+    retryAttempts: 3,
+    headers: {},
   }),
 };

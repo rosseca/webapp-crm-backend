@@ -15,12 +15,14 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { VerifyTokenDto } from './dto/verify-token.dto';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('register')
   async register(@Body() dto: RegisterDto) {
     const result = await this.authService.register(dto);
@@ -32,6 +34,7 @@ export class AuthController {
     };
   }
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
@@ -44,6 +47,7 @@ export class AuthController {
     };
   }
 
+  @Public()
   @Post('verify')
   @HttpCode(HttpStatus.OK)
   async verifyToken(@Body() dto: VerifyTokenDto) {
@@ -51,6 +55,7 @@ export class AuthController {
     return result;
   }
 
+  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refreshToken(@Body('refreshToken') refreshToken: string) {
@@ -61,6 +66,7 @@ export class AuthController {
     return result;
   }
 
+  @ApiBearerAuth()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Headers('authorization') auth: string) {
@@ -71,6 +77,7 @@ export class AuthController {
     await this.authService.logout(token);
   }
 
+  @ApiBearerAuth()
   @Get('user/:id')
   async getUser(@Param('id') id: string) {
     const user = await this.authService.getUserById(id);

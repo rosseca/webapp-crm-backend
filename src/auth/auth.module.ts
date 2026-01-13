@@ -6,7 +6,9 @@ import { AuthService } from './auth.service';
 import {
   AuthRepositoryFactory,
   AuthApiConfigProvider,
+  BaasApiConfigProvider,
 } from './repositories/auth-repository.factory';
+import { AUTH_REPOSITORY } from './repositories/auth.repository.interface';
 
 @Module({
   imports: [
@@ -17,7 +19,12 @@ import {
     ConfigModule,
   ],
   controllers: [AuthController],
-  providers: [AuthApiConfigProvider, AuthRepositoryFactory, AuthService],
-  exports: [AuthService],
+  providers: [
+    AuthApiConfigProvider,
+    BaasApiConfigProvider,
+    AuthRepositoryFactory,
+    AuthService,
+  ],
+  exports: [AuthService, AUTH_REPOSITORY],
 })
 export class AuthModule {}
