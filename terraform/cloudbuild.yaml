@@ -7,31 +7,31 @@ steps:
       - '-c'
       - |
         BUCKET_NAME="${PROJECT_ID}-tf-state"
-        echo "Using bucket: gs://${BUCKET_NAME}"
+        echo "Using bucket: gs://$${BUCKET_NAME}"
 
         # Check if bucket exists and is accessible
-        if gcloud storage buckets describe gs://${BUCKET_NAME} > /dev/null 2>&1; then
-          echo "Bucket gs://${BUCKET_NAME} already exists and is accessible"
+        if gcloud storage buckets describe gs://$${BUCKET_NAME} > /dev/null 2>&1; then
+          echo "Bucket gs://$${BUCKET_NAME} already exists and is accessible"
         else
-          echo "Creating bucket gs://${BUCKET_NAME}..."
-          gcloud storage buckets create gs://${BUCKET_NAME} \
+          echo "Creating bucket gs://$${BUCKET_NAME}..."
+          gcloud storage buckets create gs://$${BUCKET_NAME} \
             --location=${_REGION} \
             --uniform-bucket-level-access
         fi
 
         # Grant Cloud Build service account access to the bucket
-        PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')
-        CB_SA="${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
-        COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+        PROJECT_NUMBER=$$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')
+        CB_SA="$${PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
+        COMPUTE_SA="$${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
-        echo "Granting Storage Admin to Cloud Build SA: ${CB_SA}"
-        gcloud storage buckets add-iam-policy-binding gs://${BUCKET_NAME} \
-          --member="serviceAccount:${CB_SA}" \
+        echo "Granting Storage Admin to Cloud Build SA: $${CB_SA}"
+        gcloud storage buckets add-iam-policy-binding gs://$${BUCKET_NAME} \
+          --member="serviceAccount:$${CB_SA}" \
           --role="roles/storage.admin" || true
 
-        echo "Granting Storage Admin to Compute SA: ${COMPUTE_SA}"
-        gcloud storage buckets add-iam-policy-binding gs://${BUCKET_NAME} \
-          --member="serviceAccount:${COMPUTE_SA}" \
+        echo "Granting Storage Admin to Compute SA: $${COMPUTE_SA}"
+        gcloud storage buckets add-iam-policy-binding gs://$${BUCKET_NAME} \
+          --member="serviceAccount:$${COMPUTE_SA}" \
           --role="roles/storage.admin" || true
 
   # Step 1: Build Terraform Docker image
