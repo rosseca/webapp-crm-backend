@@ -6,7 +6,6 @@ import { AuthService } from './auth.service';
 import {
   AuthRepositoryFactory,
   AuthApiConfigProvider,
-  BaasApiConfigProvider,
 } from './repositories/auth-repository.factory';
 import { AUTH_REPOSITORY } from './repositories/auth.repository.interface';
 
@@ -19,12 +18,7 @@ import { AUTH_REPOSITORY } from './repositories/auth.repository.interface';
     ConfigModule,
   ],
   controllers: [AuthController],
-  providers: [
-    AuthApiConfigProvider,
-    BaasApiConfigProvider,
-    AuthRepositoryFactory,
-    AuthService,
-  ],
+  providers: [AuthApiConfigProvider, AuthRepositoryFactory, AuthService],
   exports: [AuthService, AUTH_REPOSITORY],
 })
 export class AuthModule {}

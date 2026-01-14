@@ -1,9 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import {
-  BaseApiRepository,
-  ApiRepositoryConfig,
-} from '../../common/repositories/base-api.repository';
+import { firstValueFrom } from 'rxjs';
 import {
   IAuthRepository,
   AuthResult,
@@ -14,39 +11,63 @@ import { Auth } from '../entities/auth.entity';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { RepositoryException } from '../../common/exceptions/repository.exception';
+import { ConfigService } from '@nestjs/config';
 
-export const BAAS_API_CONFIG = 'BAAS_API_CONFIG';
-
-interface BaasAuthResponse {
-  token: string;
+interface FirebaseSignInResponse {
+  idToken: string;
+  email: string;
+  refreshToken: string;
+  expiresIn: string;
+  localId: string;
+  registered: boolean;
 }
 
-interface BaasUserResponse {
-  id: string;
-  email: string;
-  name: string;
-  email_verified: boolean;
-  loginWith: string;
-  company_name?: string;
-  created_at: string | null;
-  updated_at: string | null;
+interface FirebaseLookupResponse {
+  users: Array<{
+    localId: string;
+    email: string;
+    emailVerified: boolean;
+    displayName?: string;
+    photoUrl?: string;
+    createdAt: string;
+    lastLoginAt: string;
+  }>;
+}
+
+interface FirebaseTokenPayload {
+  user_id?: string;
+  sub?: string;
+  email?: string;
+  name?: string;
+  exp?: number;
+  iat?: number;
+  [key: string]: unknown;
 }
 
 @Injectable()
-export class BaasAuthRepository
-  extends BaseApiRepository
-  implements IAuthRepository
-{
+export class BaasAuthRepository implements IAuthRepository {
+  private readonly logger = new Logger(BaasAuthRepository.name);
+  private readonly firebaseApiKey: string;
+  private readonly identityToolkitUrl =
+    'https://identitytoolkit.googleapis.com/v1';
+  private readonly secureTokenUrl = 'https://securetoken.googleapis.com/v1';
+  private readonly baasApiUrl: string;
+
   constructor(
-    httpService: HttpService,
-    @Inject(BAAS_API_CONFIG) config: ApiRepositoryConfig,
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
   ) {
-    super(httpService, config);
+    this.firebaseApiKey = this.configService.get<string>(
+      'FIREBASE_WEB_API_KEY',
+      '',
+    );
+    this.baasApiUrl = this.configService.get<string>(
+      'CHATAI_API_URL',
+      'https://test.api.aichatapp.ai',
+    );
   }
 
   async register(_dto: RegisterDto): Promise<AuthResult> {
-    // BAAS user creation requires ADMIN role, so registration
-    // should be handled differently (e.g., via admin panel)
     throw new RepositoryException(
       'Registration not supported via BAAS API. Contact admin.',
       501,
@@ -55,40 +76,73 @@ export class BaasAuthRepository
 
   async login(dto: LoginDto): Promise<AuthResult> {
     try {
-      // Call BAAS /api/auth with username (email) and password
-      const response = await this.post<BaasAuthResponse>('/auth', {
-        username: dto.email,
-        password: dto.password,
-      });
+      this.logger.log(`Attempting Firebase login for: ${dto.email}`);
 
-      // Decode the Firebase token to get user info
-      const tokenPayload = this.decodeToken(response.token);
+      // Call Firebase Identity Toolkit signInWithPassword
+      const signInUrl = `${this.identityToolkitUrl}/accounts:signInWithPassword?key=${this.firebaseApiKey}`;
+
+      const signInResponse = await firstValueFrom(
+        this.httpService.post<FirebaseSignInResponse>(signInUrl, {
+          email: dto.email,
+          password: dto.password,
+          returnSecureToken: true,
+        }),
+      );
+
+      const { idToken, email, localId, expiresIn, refreshToken } =
+        signInResponse.data;
+
+      this.logger.log(`Firebase login successful for: ${email}`);
+
+      // Get user details from lookup
+      let displayName = '';
+      try {
+        const lookupUrl = `${this.identityToolkitUrl}/accounts:lookup?key=${this.firebaseApiKey}`;
+        const lookupResponse = await firstValueFrom(
+          this.httpService.post<FirebaseLookupResponse>(lookupUrl, {
+            idToken,
+          }),
+        );
+
+        if (lookupResponse.data.users?.[0]) {
+          displayName = lookupResponse.data.users[0].displayName || '';
+        }
+      } catch (lookupError) {
+        this.logger.warn('Failed to fetch user details from lookup');
+      }
 
       const auth = new Auth();
-      auth.id = tokenPayload.user_id || tokenPayload.sub || '';
-      auth.email = tokenPayload.email || dto.email;
-      auth.firstName = tokenPayload.name?.split(' ')[0] || '';
-      auth.lastName = tokenPayload.name?.split(' ').slice(1).join(' ') || '';
+      auth.id = localId;
+      auth.email = email;
+      auth.firstName = displayName?.split(' ')[0] || '';
+      auth.lastName = displayName?.split(' ').slice(1).join(' ') || '';
       auth.createdAt = new Date();
       auth.updatedAt = new Date();
 
       return {
         user: auth,
-        accessToken: response.token,
-        refreshToken: response.token, // Firebase tokens don't have separate refresh tokens in this flow
-        expiresIn: tokenPayload.exp
-          ? tokenPayload.exp - Math.floor(Date.now() / 1000)
-          : 3600,
+        accessToken: idToken,
+        refreshToken: refreshToken,
+        expiresIn: parseInt(expiresIn, 10) || 3600,
       };
-    } catch (error) {
-      if (error instanceof RepositoryException) {
-        if (error.getStatus() === 401) {
+    } catch (error: any) {
+      this.logger.error(`Firebase login failed: ${error.message}`);
+
+      if (error.response?.data?.error) {
+        const firebaseError = error.response.data.error;
+        this.logger.error(`Firebase error: ${JSON.stringify(firebaseError)}`);
+
+        if (
+          firebaseError.message === 'EMAIL_NOT_FOUND' ||
+          firebaseError.message === 'INVALID_PASSWORD' ||
+          firebaseError.message === 'INVALID_LOGIN_CREDENTIALS'
+        ) {
           throw RepositoryException.unauthorized('Invalid email or password');
         }
-        throw error;
       }
+
       throw new RepositoryException('Failed to login', 500, {
-        originalError: (error as Error).message,
+        originalError: error.message,
       });
     }
   }
@@ -107,55 +161,67 @@ export class BaasAuthRepository
         userId: tokenPayload.user_id || tokenPayload.sub,
         email: tokenPayload.email,
         claims: tokenPayload,
-        expiresAt: tokenPayload.exp ? new Date(tokenPayload.exp * 1000) : undefined,
+        expiresAt: tokenPayload.exp
+          ? new Date(tokenPayload.exp * 1000)
+          : undefined,
       };
     } catch {
       return { valid: false };
     }
   }
 
-  async refreshToken(_refreshToken: string): Promise<TokenRefreshResult> {
-    // Firebase token refresh should be handled on the client side
-    throw new RepositoryException(
-      'Token refresh should be handled on client side with Firebase SDK',
-      501,
-    );
+  async refreshToken(refreshToken: string): Promise<TokenRefreshResult> {
+    try {
+      const tokenUrl = `${this.secureTokenUrl}/token?key=${this.firebaseApiKey}`;
+
+      const response = await firstValueFrom(
+        this.httpService.post(tokenUrl, {
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+        }),
+      );
+
+      return {
+        accessToken: response.data.id_token,
+        refreshToken: response.data.refresh_token,
+        expiresIn: parseInt(response.data.expires_in, 10) || 3600,
+      };
+    } catch (error: any) {
+      this.logger.error(`Token refresh failed: ${error.message}`);
+      throw new RepositoryException('Failed to refresh token', 401);
+    }
   }
 
   async revokeToken(_token: string): Promise<boolean> {
-    // Token revocation would require Firebase Admin SDK
-    // For now, we just return true (client should clear their token)
     return true;
   }
 
   async getUserById(userId: string): Promise<Auth | null> {
     try {
-      // We need a valid token to fetch user info
-      // This would typically be called with the current user's token
-      const response = await this.get<BaasUserResponse>(`/users/${userId}`);
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.baasApiUrl}/users/${userId}`),
+      );
 
+      const userData = response.data;
       const auth = new Auth();
-      auth.id = response.id;
-      auth.email = response.email;
-      auth.firstName = response.name?.split(' ')[0] || '';
-      auth.lastName = response.name?.split(' ').slice(1).join(' ') || '';
-      auth.createdAt = response.created_at
-        ? new Date(response.created_at)
+      auth.id = userData.id;
+      auth.email = userData.email;
+      auth.firstName = userData.name?.split(' ')[0] || '';
+      auth.lastName = userData.name?.split(' ').slice(1).join(' ') || '';
+      auth.createdAt = userData.created_at
+        ? new Date(userData.created_at)
         : new Date();
-      auth.updatedAt = response.updated_at
-        ? new Date(response.updated_at)
+      auth.updatedAt = userData.updated_at
+        ? new Date(userData.updated_at)
         : new Date();
 
       return auth;
-    } catch (error) {
-      if (error instanceof RepositoryException && error.getStatus() === 404) {
-        return null;
-      }
-      throw error;
+    } catch {
+      return null;
     }
   }
 
-  private decodeToken(token: string): Record<string, unknown> {
+  private decodeToken(token: string): FirebaseTokenPayload {
     try {
       const parts = token.split('.');
       if (parts.length !== 3) {
@@ -164,7 +230,7 @@ export class BaasAuthRepository
 
       const payload = parts[1];
       const decoded = Buffer.from(payload, 'base64').toString('utf-8');
-      return JSON.parse(decoded);
+      return JSON.parse(decoded) as FirebaseTokenPayload;
     } catch {
       throw new RepositoryException('Invalid token format', 401);
     }

@@ -98,9 +98,10 @@ export abstract class BaseApiRepository {
           throw new Error(`Unsupported HTTP method: ${method}`);
       }
 
+      const timeoutMs = this.config.timeout ?? this.defaultTimeout;
       const response = await firstValueFrom(
         observable.pipe(
-          timeout(this.config.timeout ?? this.defaultTimeout),
+          timeout({ each: timeoutMs }),
           retry({
             count: this.config.retryAttempts ?? this.defaultRetryAttempts,
             delay: 1000,
