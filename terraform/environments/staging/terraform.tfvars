@@ -20,8 +20,12 @@ allow_unauthenticated = true
 
 # Environment Variables (PORT is reserved by Cloud Run, don't set it here)
 env_vars = {
-  NODE_ENV    = "staging"
-  CORS_ORIGIN = "*"
+  NODE_ENV             = "staging"
+  CORS_ORIGIN          = "https://leadtech-crm-ew.a.run.app"
+  AUTH_PROVIDER        = "baas"
+  CHATAI_API_URL       = "https://europe-west2-wa-aichat-test.cloudfunctions.net/api"
+  CHATAI_API_TIMEOUT   = "10000"
+  FIREBASE_WEB_API_KEY = "AIzaSyAzU3bw-oi0ewROzEFdK00hX8ghjjfQ2BI"
 }
 
 # Secret Environment Variables (from Secret Manager)
