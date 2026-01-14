@@ -70,11 +70,32 @@ variable "allow_unauthenticated" {
   default     = true
 }
 
-# Environment Variables
-variable "env_vars" {
-  description = "Environment variables for the Cloud Run service"
-  type        = map(string)
-  default     = {}
+# Environment Variables (passed from Cloud Build substitutions)
+variable "cors_origin" {
+  description = "CORS origin URL (frontend URL)"
+  type        = string
+}
+
+variable "auth_provider" {
+  description = "Auth provider type (baas, firebase, prisma, api)"
+  type        = string
+  default     = "baas"
+}
+
+variable "chatai_api_url" {
+  description = "ChatAI BaaS API URL"
+  type        = string
+}
+
+variable "chatai_api_timeout" {
+  description = "ChatAI API timeout in milliseconds"
+  type        = string
+  default     = "10000"
+}
+
+variable "firebase_web_api_key" {
+  description = "Firebase Web API Key"
+  type        = string
 }
 
 variable "secret_env_vars" {

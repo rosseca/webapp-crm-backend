@@ -51,13 +51,30 @@ resource "google_cloud_run_v2_service" "crm_backend" {
         }
       }
 
-      # Environment variables
-      dynamic "env" {
-        for_each = var.env_vars
-        content {
-          name  = env.key
-          value = env.value
-        }
+      # Environment variables (from Cloud Build substitutions)
+      env {
+        name  = "NODE_ENV"
+        value = var.environment
+      }
+      env {
+        name  = "CORS_ORIGIN"
+        value = var.cors_origin
+      }
+      env {
+        name  = "AUTH_PROVIDER"
+        value = var.auth_provider
+      }
+      env {
+        name  = "CHATAI_API_URL"
+        value = var.chatai_api_url
+      }
+      env {
+        name  = "CHATAI_API_TIMEOUT"
+        value = var.chatai_api_timeout
+      }
+      env {
+        name  = "FIREBASE_WEB_API_KEY"
+        value = var.firebase_web_api_key
       }
 
       # Environment variables from secrets
