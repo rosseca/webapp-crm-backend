@@ -13,7 +13,12 @@ import { AuthGuard } from './common/guards/auth.guard';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
+      // In production (Cloud Run), env vars come from the container, not files
+      envFilePath:
+        process.env.NODE_ENV === 'production'
+          ? undefined
+          : ['.env.local', '.env'],
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
     HttpClientModule,
     AuthModule,
