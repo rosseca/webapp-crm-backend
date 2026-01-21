@@ -1,6 +1,5 @@
 import {
   Injectable,
-  Logger,
   UnauthorizedException,
   ConflictException,
   Inject,
@@ -15,69 +14,90 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { Auth } from './entities/auth.entity';
 import { RepositoryException } from '../common/exceptions/repository.exception';
+import { GcpLoggingService, ServiceLogger } from '../common/logging';
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
+  private readonly logger: ServiceLogger;
 
   constructor(
     @Inject(AUTH_REPOSITORY)
     private readonly authRepository: IAuthRepository,
-  ) {}
+    private readonly loggingService: GcpLoggingService,
+  ) {
+    this.logger = this.loggingService.forService('AuthService');
+  }
 
   async register(dto: RegisterDto): Promise<AuthResult> {
-    this.logger.log(`Attempting to register user with email: ${dto.email}`);
+    await this.logger.info('register', `Attempting to register user`, {
+      userEmail: dto.email,
+    });
 
     try {
       const result = await this.authRepository.register(dto);
 
-      this.logger.log(`Successfully registered user: ${result.user.id}`);
+      await this.logger.info('register', `Successfully registered user`, {
+        userId: result.user.id,
+        userEmail: result.user.email,
+      });
       return result;
     } catch (error) {
       if (error instanceof RepositoryException && error.getStatus() === 409) {
-        this.logger.warn(
-          `Registration failed - email already exists: ${dto.email}`,
-        );
+        await this.logger.warn('register', `Registration failed - email already exists`, {
+          userEmail: dto.email,
+        });
         throw new ConflictException('Email already registered');
       }
 
-      this.logger.error(
-        `Registration failed for ${dto.email}: ${(error as Error).message}`,
+      await this.logger.error(
+        'register',
+        `Registration failed`,
+        error instanceof Error ? error : new Error(String(error)),
+        { userEmail: dto.email },
       );
       throw error;
     }
   }
 
   async login(dto: LoginDto): Promise<AuthResult> {
-    this.logger.log(`Login attempt for email: ${dto.email}`);
+    await this.logger.info('login', `Login attempt`, { userEmail: dto.email });
 
     try {
       const result = await this.authRepository.login(dto);
 
-      this.logger.log(`Successful login for user: ${result.user.id}`);
+      await this.logger.info('login', `Successful login`, {
+        userId: result.user.id,
+        userEmail: result.user.email,
+      });
       return result;
     } catch (error) {
       if (error instanceof RepositoryException && error.getStatus() === 401) {
-        this.logger.warn(`Failed login attempt for: ${dto.email}`);
+        await this.logger.warn('login', `Failed login attempt - invalid credentials`, {
+          userEmail: dto.email,
+        });
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      this.logger.error(
-        `Login error for ${dto.email}: ${(error as Error).message}`,
+      await this.logger.error(
+        'login',
+        `Login error`,
+        error instanceof Error ? error : new Error(String(error)),
+        { userEmail: dto.email },
       );
       throw error;
     }
   }
 
   async verifyToken(token: string): Promise<TokenVerificationResult> {
-    this.logger.debug('Verifying access token');
-
     const result = await this.authRepository.verifyToken(token);
 
     if (result.valid) {
-      this.logger.debug(`Token verified for user: ${result.userId}`);
+      await this.logger.debug('verifyToken', `Token verified successfully`, {
+        userId: result.userId,
+        userEmail: result.email,
+      });
     } else {
-      this.logger.debug('Token verification failed - invalid token');
+      await this.logger.debug('verifyToken', `Token verification failed - invalid token`);
     }
 
     return result;
@@ -86,37 +106,37 @@ export class AuthService {
   async refreshToken(
     refreshToken: string,
   ): Promise<{ accessToken: string; expiresIn: number }> {
-    this.logger.debug('Refreshing access token');
+    await this.logger.debug('refreshToken', `Refreshing access token`);
 
     try {
       const result = await this.authRepository.refreshToken(refreshToken);
-      this.logger.debug('Token refreshed successfully');
+      await this.logger.info('refreshToken', `Token refreshed successfully`);
       return result;
     } catch (error) {
-      this.logger.warn('Token refresh failed');
+      await this.logger.warn('refreshToken', `Token refresh failed`);
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
 
   async logout(token: string): Promise<void> {
-    this.logger.log('User logout requested');
+    await this.logger.info('logout', `User logout requested`);
 
     const revoked = await this.authRepository.revokeToken(token);
 
     if (revoked) {
-      this.logger.log('User logged out successfully');
+      await this.logger.info('logout', `User logged out successfully`);
     } else {
-      this.logger.warn('Logout completed but token revocation may have failed');
+      await this.logger.warn('logout', `Logout completed but token revocation may have failed`);
     }
   }
 
   async getUserById(userId: string): Promise<Auth | null> {
-    this.logger.debug(`Fetching user by ID: ${userId}`);
+    await this.logger.debug('getUserById', `Fetching user by ID`, { userId });
 
     const user = await this.authRepository.getUserById(userId);
 
     if (!user) {
-      this.logger.debug(`User not found: ${userId}`);
+      await this.logger.debug('getUserById', `User not found`, { userId });
     }
 
     return user;

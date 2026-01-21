@@ -8,6 +8,7 @@ import {
   AuthApiConfigProvider,
 } from './repositories/auth-repository.factory';
 import { AUTH_REPOSITORY } from './repositories/auth.repository.interface';
+import { FirestoreModule } from '../common/firestore/firestore.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AUTH_REPOSITORY } from './repositories/auth.repository.interface';
       maxRedirects: 5,
     }),
     ConfigModule,
+    FirestoreModule,
   ],
   controllers: [AuthController],
   providers: [AuthApiConfigProvider, AuthRepositoryFactory, AuthService],

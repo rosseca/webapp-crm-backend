@@ -2,10 +2,36 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { Request, Response, NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
+  const requestLogger = new Logger('HTTP');
+
+  // Log all requests
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const { method, originalUrl, body } = req;
+    const startTime = Date.now();
+
+    requestLogger.log(`→ ${method} ${originalUrl}`);
+    if (Object.keys(body || {}).length > 0) {
+      requestLogger.debug(`  Body: ${JSON.stringify(body)}`);
+    }
+
+    res.on('finish', () => {
+      const duration = Date.now() - startTime;
+      const { statusCode } = res;
+      const statusColor = statusCode >= 400 ? 'ERROR' : 'LOG';
+      if (statusCode >= 400) {
+        requestLogger.error(`← ${method} ${originalUrl} ${statusCode} (${duration}ms)`);
+      } else {
+        requestLogger.log(`← ${method} ${originalUrl} ${statusCode} (${duration}ms)`);
+      }
+    });
+
+    next();
+  });
 
   // Enable CORS for frontend
   app.enableCors({

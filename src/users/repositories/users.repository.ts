@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import {
   BaseApiRepository,
@@ -15,6 +15,8 @@ export class UsersRepository
   extends BaseApiRepository
   implements IUsersRepository
 {
+  private readonly logger = new Logger(UsersRepository.name);
+
   constructor(
     httpService: HttpService,
     @Inject(CHATAI_API_CONFIG) config: ApiRepositoryConfig,
@@ -36,6 +38,9 @@ export class UsersRepository
     if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
     const endpoint = `/users?${queryParams.toString()}`;
+    this.logger.log(`Calling CHATAI API: ${this.config.baseUrl}${endpoint}`);
+    this.logger.debug(`Token (first 50 chars): ${token.substring(0, 50)}...`);
+
     const response = await this.get<PaginatedUsers>(
       endpoint,
       this.withAuth(token),

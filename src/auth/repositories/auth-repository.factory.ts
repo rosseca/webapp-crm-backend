@@ -1,28 +1,33 @@
 import { Provider, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { Firestore } from '@google-cloud/firestore';
 import { AUTH_REPOSITORY, IAuthRepository } from './auth.repository.interface';
 import { AuthRepository, AUTH_API_CONFIG } from './auth.repository';
 import { FirebaseAuthRepository } from './firebase-auth.repository';
 import { PrismaAuthRepository } from './prisma-auth.repository';
 import { BaasAuthRepository } from './baas-auth.repository';
+import { FirestoreAuthRepository } from './firestore-auth.repository';
 import { ApiRepositoryConfig } from '../../common/repositories/base-api.repository';
+import { FIRESTORE } from '../../common/firestore/firestore.module';
 
 export enum AuthProviderType {
   API = 'api',
   FIREBASE = 'firebase',
   PRISMA = 'prisma',
   BAAS = 'baas',
+  FIRESTORE = 'firestore',
 }
 
 const logger = new Logger('AuthRepositoryFactory');
 
 export const AuthRepositoryFactory: Provider = {
   provide: AUTH_REPOSITORY,
-  inject: [ConfigService, HttpService],
+  inject: [ConfigService, HttpService, { token: FIRESTORE, optional: true }],
   useFactory: (
     configService: ConfigService,
     httpService: HttpService,
+    firestore?: Firestore,
   ): IAuthRepository => {
     const providerType = configService.get<string>(
       'AUTH_PROVIDER',
@@ -32,6 +37,15 @@ export const AuthRepositoryFactory: Provider = {
     logger.log(`Initializing auth repository with provider: ${providerType}`);
 
     switch (providerType) {
+      case AuthProviderType.FIRESTORE:
+        if (!firestore) {
+          throw new Error(
+            'Firestore provider requires FirestoreModule to be imported',
+          );
+        }
+        logger.log('Using Firestore Auth repository');
+        return new FirestoreAuthRepository(firestore, configService);
+
       case AuthProviderType.FIREBASE:
         logger.log('Using Firebase Auth repository');
         return new FirebaseAuthRepository(configService);

@@ -5,6 +5,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { HttpClientModule } from './common/http/http-client.module';
+import { FirebaseTokenModule } from './common/services/firebase-token.module';
+import { LoggingModule } from './common/logging';
 import { UsersModule } from './users/users.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { AuthGuard } from './common/guards/auth.guard';
@@ -20,7 +22,9 @@ import { AuthGuard } from './common/guards/auth.guard';
           : ['.env.local', '.env'],
       ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
+    LoggingModule,
     HttpClientModule,
+    FirebaseTokenModule,
     AuthModule,
     UsersModule,
     TransactionsModule,
