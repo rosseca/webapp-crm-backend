@@ -14,8 +14,10 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { InviteUserDto } from './dto/invite-user.dto';
 import { VerifyTokenDto } from './dto/verify-token.dto';
 import { Public } from '../common/decorators/public.decorator';
+import { CurrentUser, CurrentUserData } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -85,5 +87,28 @@ export class AuthController {
       throw new NotFoundException('User not found');
     }
     return user;
+  }
+
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Invite a new user (requires authentication)' })
+  @Post('invite')
+  @HttpCode(HttpStatus.CREATED)
+  async inviteUser(
+    @Body() dto: InviteUserDto,
+    @CurrentUser() currentUser: CurrentUserData,
+  ) {
+    const user = await this.authService.inviteUser(dto, {
+      userId: currentUser.id,
+      email: currentUser.email,
+    });
+    return {
+      message: 'User invited successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    };
   }
 }

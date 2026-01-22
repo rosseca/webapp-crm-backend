@@ -12,6 +12,7 @@ import {
 } from './repositories/auth.repository.interface';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { InviteUserDto } from './dto/invite-user.dto';
 import { Auth } from './entities/auth.entity';
 import { RepositoryException } from '../common/exceptions/repository.exception';
 import { GcpLoggingService, ServiceLogger } from '../common/logging';
@@ -140,5 +141,50 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async inviteUser(
+    dto: InviteUserDto,
+    invitedBy: { userId: string; email: string },
+  ): Promise<Auth> {
+    await this.logger.info('inviteUser', `Inviting new user`, {
+      userEmail: dto.email,
+      invitedByUserId: invitedBy.userId,
+      invitedByEmail: invitedBy.email,
+    });
+
+    try {
+      const result = await this.authRepository.register({
+        email: dto.email,
+        password: dto.password,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+      });
+
+      await this.logger.info('inviteUser', `User invited successfully`, {
+        userId: result.user.id,
+        userEmail: result.user.email,
+        invitedByUserId: invitedBy.userId,
+        invitedByEmail: invitedBy.email,
+      });
+
+      return result.user;
+    } catch (error) {
+      if (error instanceof RepositoryException && error.getStatus() === 409) {
+        await this.logger.warn('inviteUser', `Invite failed - email already exists`, {
+          userEmail: dto.email,
+          invitedByUserId: invitedBy.userId,
+        });
+        throw new ConflictException('Email already registered');
+      }
+
+      await this.logger.error(
+        'inviteUser',
+        `Failed to invite user`,
+        error instanceof Error ? error : new Error(String(error)),
+        { userEmail: dto.email, invitedByUserId: invitedBy.userId },
+      );
+      throw error;
+    }
   }
 }
