@@ -1,0 +1,61 @@
+steps:
+  # Step 0: Build App Docker image (using GCR instead of Artifact Registry)
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Build Docker Image
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:${SHORT_SHA}'
+      - '-t'
+      - 'gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:latest'
+      - '.'
+    dir: .
+
+  # Step 1: Push Docker image to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Push Docker Image
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'gcr.io/${PROJECT_ID}/${_SERVICE_NAME}'
+    waitFor:
+      - Build Docker Image
+
+  # Step 2: Deploy updated image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+    id: Deploy to Cloud Run
+    entrypoint: gcloud
+    # env:
+    #   - _CHAT_WEBHOOK_URL=${_CHAT_WEBHOOK_URL}
+    #   - _ENVIRONMENT=${_ENVIRONMENT}
+    #   - _SERVICE_NAME=${_SERVICE_NAME}
+    #   - _ARTIFACT_REPO=${_ARTIFACT_REPO}
+    #   - _REGION=${_REGION}
+    #   - REPO_NAME=${REPO_NAME}
+    #   - REPO_FULL_NAME=${REPO_FULL_NAME}
+    #   - BUILD_ID=${BUILD_ID}
+    #   - PROJECT_ID=${PROJECT_ID}
+    #   - BRANCH_NAME=${BRANCH_NAME}
+    #   - SHORT_SHA=${SHORT_SHA}
+    #   - LOCATION=${LOCATION}
+    args: [
+      'run',
+      'deploy',
+      '${_SERVICE_NAME}',
+      '--image=gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:latest',
+      '--region=${_REGION}',
+      '--platform=managed'
+    ]
+
+# Substitution variables (can be overridden in trigger configuration)
+substitutions:
+  # _ENVIRONMENT: staging
+  _SERVICE_NAME: leadtech-crm
+  _ARTIFACT_REPO: leadtech-crm
+  _REGION: europe-west2
+  # Environment variables for Cloud Run
+  _VITE_API_URL: ""
+
+# Use Cloud Logging to store the logs from the execution
+options:
+  logging: CLOUD_LOGGING_ONLY
