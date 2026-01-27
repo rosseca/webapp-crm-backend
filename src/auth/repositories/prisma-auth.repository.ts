@@ -6,7 +6,7 @@ import {
   TokenVerificationResult,
   TokenRefreshResult,
 } from './auth.repository.interface';
-import { Auth } from '../entities/auth.entity';
+import { Auth, UserRole } from '../entities/auth.entity';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { RepositoryException } from '../../common/exceptions/repository.exception';
@@ -46,6 +46,14 @@ export class PrismaAuthRepository implements IAuthRepository {
     //   ...tokens,
     // };
 
+    throw new RepositoryException(
+      'PrismaAuthRepository not implemented. See comments in file.',
+      501,
+    );
+  }
+
+  async registerWithRole(dto: RegisterDto, role: UserRole): Promise<AuthResult> {
+    // Template: implement with role support
     throw new RepositoryException(
       'PrismaAuthRepository not implemented. See comments in file.',
       501,

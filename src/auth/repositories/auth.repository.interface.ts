@@ -1,9 +1,10 @@
-import { Auth } from '../entities/auth.entity';
+import { Auth, UserRole } from '../entities/auth.entity';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 
 export interface IAuthRepository {
   register(dto: RegisterDto): Promise<AuthResult>;
+  registerWithRole(dto: RegisterDto, role: UserRole): Promise<AuthResult>;
   login(dto: LoginDto): Promise<AuthResult>;
   verifyToken(token: string): Promise<TokenVerificationResult>;
   refreshToken(refreshToken: string): Promise<TokenRefreshResult>;

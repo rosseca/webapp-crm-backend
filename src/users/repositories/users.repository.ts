@@ -5,7 +5,11 @@ import {
   ApiRepositoryConfig,
 } from '../../common/repositories/base-api.repository';
 import { IUsersRepository } from './users.repository.interface';
-import { User, PaginatedUsers } from '../entities/user.entity';
+import {
+  User,
+  PaginatedUsers,
+  UserWithTransactions,
+} from '../entities/user.entity';
 import { ListUsersDto } from '../dto/list-users.dto';
 
 export const CHATAI_API_CONFIG = 'CHATAI_API_CONFIG';
@@ -59,5 +63,20 @@ export class UsersRepository
     } catch (error) {
       return null;
     }
+  }
+
+  async getUserWithTransactions(
+    id: string,
+    token: string,
+  ): Promise<UserWithTransactions> {
+    const endpoint = `/user-transactions/${id}`;
+    this.logger.log(`Calling CHATAI API: ${this.config.baseUrl}${endpoint}`);
+
+    const response = await this.get<UserWithTransactions>(
+      endpoint,
+      this.withAuth(token),
+    );
+
+    return response;
   }
 }

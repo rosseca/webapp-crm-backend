@@ -7,7 +7,7 @@ import {
   TokenVerificationResult,
   TokenRefreshResult,
 } from './auth.repository.interface';
-import { Auth } from '../entities/auth.entity';
+import { Auth, UserRole } from '../entities/auth.entity';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { RepositoryException } from '../../common/exceptions/repository.exception';
@@ -46,6 +46,34 @@ export class FirebaseAuthRepository implements IAuthRepository, OnModuleInit {
 
       return {
         user: this.mapFirebaseUserToAuth(userRecord),
+        accessToken: customToken,
+        refreshToken: '',
+        expiresIn: 3600,
+      };
+    } catch (error) {
+      throw this.handleFirebaseError(error);
+    }
+  }
+
+  async registerWithRole(dto: RegisterDto, role: UserRole): Promise<AuthResult> {
+    // Firebase Auth doesn't support custom roles natively
+    // For now, delegate to register and set custom claims with role
+    try {
+      const userRecord = await admin.auth().createUser({
+        email: dto.email,
+        password: dto.password,
+        displayName: `${dto.firstName} ${dto.lastName}`,
+      });
+
+      // Set custom claims with role
+      await admin.auth().setCustomUserClaims(userRecord.uid, { role });
+
+      const customToken = await admin.auth().createCustomToken(userRecord.uid);
+      const auth = this.mapFirebaseUserToAuth(userRecord);
+      auth.role = role;
+
+      return {
+        user: auth,
         accessToken: customToken,
         refreshToken: '',
         expiresIn: 3600,
@@ -143,6 +171,7 @@ export class FirebaseAuthRepository implements IAuthRepository, OnModuleInit {
     const nameParts = (userRecord.displayName || '').split(' ');
     auth.firstName = nameParts[0] || '';
     auth.lastName = nameParts.slice(1).join(' ') || '';
+    auth.role = (userRecord.customClaims?.role as UserRole) || 'admin';
 
     auth.createdAt = new Date(userRecord.metadata.creationTime);
     auth.updatedAt = new Date(

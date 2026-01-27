@@ -147,23 +147,28 @@ export class AuthService {
     dto: InviteUserDto,
     invitedBy: { userId: string; email: string },
   ): Promise<Auth> {
-    await this.logger.info('inviteUser', `Inviting new user`, {
+    await this.logger.info('inviteUser', `Inviting new user with role ${dto.role}`, {
       userEmail: dto.email,
+      role: dto.role,
       invitedByUserId: invitedBy.userId,
       invitedByEmail: invitedBy.email,
     });
 
     try {
-      const result = await this.authRepository.register({
-        email: dto.email,
-        password: dto.password,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-      });
+      const result = await this.authRepository.registerWithRole(
+        {
+          email: dto.email,
+          password: dto.password,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+        },
+        dto.role,
+      );
 
       await this.logger.info('inviteUser', `User invited successfully`, {
         userId: result.user.id,
         userEmail: result.user.email,
+        role: dto.role,
         invitedByUserId: invitedBy.userId,
         invitedByEmail: invitedBy.email,
       });

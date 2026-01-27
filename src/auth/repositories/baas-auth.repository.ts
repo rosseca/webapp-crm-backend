@@ -7,7 +7,7 @@ import {
   TokenVerificationResult,
   TokenRefreshResult,
 } from './auth.repository.interface';
-import { Auth } from '../entities/auth.entity';
+import { Auth, UserRole } from '../entities/auth.entity';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { RepositoryException } from '../../common/exceptions/repository.exception';
@@ -74,6 +74,13 @@ export class BaasAuthRepository implements IAuthRepository {
     );
   }
 
+  async registerWithRole(_dto: RegisterDto, _role: UserRole): Promise<AuthResult> {
+    throw new RepositoryException(
+      'Registration not supported via BAAS API. Contact admin.',
+      501,
+    );
+  }
+
   async login(dto: LoginDto): Promise<AuthResult> {
     try {
       this.logger.log(`Attempting Firebase login for: ${dto.email}`);
@@ -116,6 +123,7 @@ export class BaasAuthRepository implements IAuthRepository {
       auth.email = email;
       auth.firstName = displayName?.split(' ')[0] || '';
       auth.lastName = displayName?.split(' ').slice(1).join(' ') || '';
+      auth.role = 'admin'; // Default role for BAAS users
       auth.createdAt = new Date();
       auth.updatedAt = new Date();
 
@@ -208,6 +216,7 @@ export class BaasAuthRepository implements IAuthRepository {
       auth.email = userData.email;
       auth.firstName = userData.name?.split(' ')[0] || '';
       auth.lastName = userData.name?.split(' ').slice(1).join(' ') || '';
+      auth.role = userData.role || 'admin'; // Default role for BAAS users
       auth.createdAt = userData.created_at
         ? new Date(userData.created_at)
         : new Date();

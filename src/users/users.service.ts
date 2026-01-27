@@ -3,7 +3,11 @@ import {
   IUsersRepository,
   USERS_REPOSITORY,
 } from './repositories/users.repository.interface';
-import { User, PaginatedUsers } from './entities/user.entity';
+import {
+  User,
+  PaginatedUsers,
+  UserWithTransactions,
+} from './entities/user.entity';
 import { ListUsersDto } from './dto/list-users.dto';
 import { GcpLoggingService, ServiceLogger } from '../common/logging';
 
@@ -67,6 +71,39 @@ export class UsersService {
       await this.logger.error(
         'getById',
         'Failed to fetch user',
+        error instanceof Error ? error : new Error(String(error)),
+        { userId: id },
+      );
+      throw error;
+    }
+  }
+
+  async getUserWithTransactions(
+    id: string,
+    token: string,
+  ): Promise<UserWithTransactions> {
+    await this.logger.info('getUserWithTransactions', 'Fetching user with transactions', {
+      userId: id,
+    });
+
+    try {
+      const result = await this.usersRepository.getUserWithTransactions(
+        id,
+        token,
+      );
+      await this.logger.info(
+        'getUserWithTransactions',
+        'User with transactions fetched successfully',
+        {
+          userId: id,
+          transactionCount: result.transactions.length,
+        },
+      );
+      return result;
+    } catch (error) {
+      await this.logger.error(
+        'getUserWithTransactions',
+        'Failed to fetch user with transactions',
         error instanceof Error ? error : new Error(String(error)),
         { userId: id },
       );

@@ -10,7 +10,7 @@ import {
   TokenVerificationResult,
   TokenRefreshResult,
 } from './auth.repository.interface';
-import { Auth } from '../entities/auth.entity';
+import { Auth, UserRole } from '../entities/auth.entity';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { RepositoryException } from '../../common/exceptions/repository.exception';
@@ -29,6 +29,7 @@ interface UserApiResponse {
   email: string;
   firstName: string;
   lastName: string;
+  role?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,6 +75,27 @@ export class AuthRepository
         throw error;
       }
       throw new RepositoryException('Failed to register user', 500, {
+        originalError: (error as Error).message,
+      });
+    }
+  }
+
+  async registerWithRole(dto: RegisterDto, role: UserRole): Promise<AuthResult> {
+    try {
+      const response = await this.post<AuthApiResponse>('/auth/invite', {
+        email: dto.email,
+        password: dto.password,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        role,
+      });
+
+      return this.mapToAuthResult(response);
+    } catch (error) {
+      if (error instanceof RepositoryException) {
+        throw error;
+      }
+      throw new RepositoryException('Failed to register user with role', 500, {
         originalError: (error as Error).message,
       });
     }
@@ -164,6 +186,7 @@ export class AuthRepository
     auth.email = userData.email;
     auth.firstName = userData.firstName;
     auth.lastName = userData.lastName;
+    auth.role = (userData.role as UserRole) || 'admin';
     auth.createdAt = new Date(userData.createdAt);
     auth.updatedAt = new Date(userData.updatedAt);
     return auth;

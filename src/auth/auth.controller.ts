@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
@@ -18,6 +19,8 @@ import { InviteUserDto } from './dto/invite-user.dto';
 import { VerifyTokenDto } from './dto/verify-token.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser, CurrentUserData } from '../common/decorators/current-user.decorator';
+import { AbilitiesGuard } from '../common/guards/abilities.guard';
+import { CheckAbilities } from '../common/decorators/check-abilities.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -90,9 +93,11 @@ export class AuthController {
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Invite a new user (requires authentication)' })
+  @ApiOperation({ summary: 'Invite a new user (requires admin role)' })
   @Post('invite')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(AbilitiesGuard)
+  @CheckAbilities({ action: 'create', subject: 'User' })
   async inviteUser(
     @Body() dto: InviteUserDto,
     @CurrentUser() currentUser: CurrentUserData,
@@ -108,6 +113,7 @@ export class AuthController {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        role: user.role,
       },
     };
   }

@@ -9,7 +9,10 @@ import { FirebaseTokenModule } from './common/services/firebase-token.module';
 import { LoggingModule } from './common/logging';
 import { UsersModule } from './users/users.module';
 import { TransactionsModule } from './transactions/transactions.module';
+import { RefundsModule } from './refunds/refunds.module';
+import { NotesModule } from './notes/notes.module';
 import { AuthGuard } from './common/guards/auth.guard';
+import { AuthorizationModule } from './common/authorization/authorization.module';
 
 @Module({
   imports: [
@@ -25,9 +28,12 @@ import { AuthGuard } from './common/guards/auth.guard';
     LoggingModule,
     HttpClientModule,
     FirebaseTokenModule,
+    AuthorizationModule,
     AuthModule,
     UsersModule,
     TransactionsModule,
+    RefundsModule,
+    NotesModule,
   ],
   controllers: [AppController],
   providers: [

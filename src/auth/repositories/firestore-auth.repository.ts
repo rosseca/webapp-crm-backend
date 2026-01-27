@@ -9,7 +9,7 @@ import {
   TokenVerificationResult,
   TokenRefreshResult,
 } from './auth.repository.interface';
-import { Auth } from '../entities/auth.entity';
+import { Auth, UserRole } from '../entities/auth.entity';
 import { LoginDto } from '../dto/login.dto';
 import { RegisterDto } from '../dto/register.dto';
 import { RepositoryException } from '../../common/exceptions/repository.exception';
@@ -19,6 +19,7 @@ interface FirestoreUserDoc {
   passwordHash: string;
   firstName: string;
   lastName: string;
+  role?: UserRole;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -33,6 +34,7 @@ interface FirestoreTokenDoc {
 interface TokenPayload {
   userId: string;
   email: string;
+  role: UserRole;
   exp: number;
   iat: number;
   type: 'access' | 'refresh';
@@ -104,6 +106,7 @@ export class FirestoreAuthRepository implements IAuthRepository {
         passwordHash,
         firstName: 'Admin',
         lastName: 'User',
+        role: 'admin',
         createdAt: now,
         updatedAt: now,
       };
@@ -155,12 +158,13 @@ export class FirestoreAuthRepository implements IAuthRepository {
       const passwordHash = await bcrypt.hash(dto.password, 10);
       const now = Timestamp.now();
 
-      // Create user document
+      // Create user document - default role is 'admin' for self-registration
       const userData: FirestoreUserDoc = {
         email: dto.email.toLowerCase(),
         passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName || '',
+        role: 'admin',
         createdAt: now,
         updatedAt: now,
       };
@@ -173,12 +177,13 @@ export class FirestoreAuthRepository implements IAuthRepository {
       auth.email = userData.email;
       auth.firstName = userData.firstName;
       auth.lastName = userData.lastName;
+      auth.role = userData.role;
       auth.createdAt = now.toDate();
       auth.updatedAt = now.toDate();
 
       // Generate tokens
-      const accessToken = this.generateToken(auth.id, auth.email, 'access');
-      const refreshToken = this.generateToken(auth.id, auth.email, 'refresh');
+      const accessToken = this.generateToken(auth.id, auth.email, auth.role, 'access');
+      const refreshToken = this.generateToken(auth.id, auth.email, auth.role, 'refresh');
 
       // Store refresh token
       await this.storeRefreshToken(auth.id, refreshToken);
@@ -201,6 +206,90 @@ export class FirestoreAuthRepository implements IAuthRepository {
       if (error.code === 5 || error.message?.includes('NOT_FOUND')) {
         throw new RepositoryException(
           'Firestore database not found. Please create the Firestore database in Firebase Console: https://console.firebase.google.com/project/webapps-crm-dev/firestore',
+          503,
+          { originalError: error.message },
+        );
+      }
+
+      throw new RepositoryException('Failed to register user', 500, {
+        originalError: error.message,
+      });
+    }
+  }
+
+  async registerWithRole(dto: RegisterDto, role: UserRole): Promise<AuthResult> {
+    try {
+      this.logger.log(`Registering new user with role ${role}: ${dto.email}`);
+
+      // Validate email domain - only leadtech emails allowed
+      if (!this.isLeadtechEmail(dto.email)) {
+        this.logger.warn(`Registration rejected - non-leadtech email: ${dto.email}`);
+        throw RepositoryException.validationError(
+          'Only @leadtech email addresses are allowed to register',
+        );
+      }
+
+      // Check if email already exists
+      const existingUser = await this.usersCollection
+        .where('email', '==', dto.email.toLowerCase())
+        .limit(1)
+        .get();
+
+      if (!existingUser.empty) {
+        throw RepositoryException.validationError('Email already registered');
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(dto.password, 10);
+      const now = Timestamp.now();
+
+      // Create user document with specified role
+      const userData: FirestoreUserDoc = {
+        email: dto.email.toLowerCase(),
+        passwordHash,
+        firstName: dto.firstName,
+        lastName: dto.lastName || '',
+        role,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const docRef = this.usersCollection.doc();
+      await docRef.set(userData);
+
+      const auth = new Auth();
+      auth.id = docRef.id;
+      auth.email = userData.email;
+      auth.firstName = userData.firstName;
+      auth.lastName = userData.lastName;
+      auth.role = role;
+      auth.createdAt = now.toDate();
+      auth.updatedAt = now.toDate();
+
+      // Generate tokens
+      const accessToken = this.generateToken(auth.id, auth.email, auth.role, 'access');
+      const refreshToken = this.generateToken(auth.id, auth.email, auth.role, 'refresh');
+
+      // Store refresh token
+      await this.storeRefreshToken(auth.id, refreshToken);
+
+      this.logger.log(`User registered successfully with role ${role}: ${dto.email}`);
+
+      return {
+        user: auth,
+        accessToken,
+        refreshToken,
+        expiresIn: this.accessTokenExpiresIn,
+      };
+    } catch (error) {
+      if (error instanceof RepositoryException) {
+        throw error;
+      }
+      this.logger.error(`Registration failed: ${error.message}`);
+
+      if (error.code === 5 || error.message?.includes('NOT_FOUND')) {
+        throw new RepositoryException(
+          'Firestore database not found. Please create the Firestore database in Firebase Console.',
           503,
           { originalError: error.message },
         );
@@ -238,17 +327,21 @@ export class FirestoreAuthRepository implements IAuthRepository {
         throw RepositoryException.unauthorized('Invalid email or password');
       }
 
+      // Handle migration: default existing users without role to 'admin'
+      const userRole: UserRole = userData.role || 'admin';
+
       const auth = new Auth();
       auth.id = userDoc.id;
       auth.email = userData.email;
       auth.firstName = userData.firstName;
       auth.lastName = userData.lastName;
+      auth.role = userRole;
       auth.createdAt = userData.createdAt.toDate();
       auth.updatedAt = userData.updatedAt.toDate();
 
       // Generate tokens
-      const accessToken = this.generateToken(auth.id, auth.email, 'access');
-      const refreshToken = this.generateToken(auth.id, auth.email, 'refresh');
+      const accessToken = this.generateToken(auth.id, auth.email, auth.role, 'access');
+      const refreshToken = this.generateToken(auth.id, auth.email, auth.role, 'refresh');
 
       // Store refresh token
       await this.storeRefreshToken(auth.id, refreshToken);
@@ -331,15 +424,18 @@ export class FirestoreAuthRepository implements IAuthRepository {
         throw RepositoryException.unauthorized('Refresh token not found');
       }
 
-      // Generate new tokens
+      // Generate new tokens (use role from payload, default to 'admin' for migration)
+      const userRole: UserRole = payload.role || 'admin';
       const newAccessToken = this.generateToken(
         payload.userId,
         payload.email,
+        userRole,
         'access',
       );
       const newRefreshToken = this.generateToken(
         payload.userId,
         payload.email,
+        userRole,
         'refresh',
       );
 
@@ -399,6 +495,7 @@ export class FirestoreAuthRepository implements IAuthRepository {
       auth.email = userData.email;
       auth.firstName = userData.firstName;
       auth.lastName = userData.lastName;
+      auth.role = userData.role || 'admin'; // Handle migration
       auth.createdAt = userData.createdAt.toDate();
       auth.updatedAt = userData.updatedAt.toDate();
 
@@ -411,6 +508,7 @@ export class FirestoreAuthRepository implements IAuthRepository {
   private generateToken(
     userId: string,
     email: string,
+    role: UserRole,
     type: 'access' | 'refresh',
   ): string {
     const now = Math.floor(Date.now() / 1000);
@@ -422,6 +520,7 @@ export class FirestoreAuthRepository implements IAuthRepository {
     const payload: TokenPayload = {
       userId,
       email,
+      role,
       iat: now,
       exp: now + expiresIn,
       type,

@@ -41,4 +41,10 @@ export class UsersController {
     }
     return user;
   }
+
+  @Get(':id/transactions')
+  async getUserWithTransactions(@Param('id') id: string) {
+    const token = await this.firebaseTokenService.getToken();
+    return this.usersService.getUserWithTransactions(id, token);
+  }
 }
