@@ -44,12 +44,12 @@ steps:
             --set-env-vars FIRESTORE_DATABASE_ID=crm-aichat-database \
             --set-env-vars GCP_TYPE=service_account \
             --set-env-vars GCP_PROJECT_ID=${PROJECT_ID} \
-            --set-env-vars GCP_CLIENT_EMAIL=nest-firestore@webapps-crm-dev1.iam.gserviceaccount.com \
+            --set-env-vars GCP_CLIENT_EMAIL=nest-firestore@${PROJECT_ID}.iam.gserviceaccount.com \
             --set-env-vars GCP_CLIENT_ID=117186042533594047944 \
             --set-env-vars GCP_AUTH_URI=https://accounts.google.com/o/oauth2/auth \
             --set-env-vars GCP_TOKEN_URI=https://oauth2.googleapis.com/token \
             --set-env-vars GCP_AUTH_PROVIDER_X509_CERT_URL=https://www.googleapis.com/oauth2/v1/certs \
-            --set-env-vars GCP_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/nest-firestore%40webapps-crm-dev.iam.gserviceaccount.com \
+            --set-env-vars GCP_CLIENT_X509_CERT_URL=https://www.googleapis.com/robot/v1/metadata/x509/nest-firestore%40${PROJECT_ID}.iam.gserviceaccount.com \
             --set-env-vars GCP_UNIVERSE_DOMAIN=googleapis.com \
             --set-env-vars GCP_LOG_NAME=leadtech-crm \
             --set-env-vars JWT_SECRET=leadtech-crm-jwt-secret-key-change-in-production \
