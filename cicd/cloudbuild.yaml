@@ -25,19 +25,6 @@ steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
     id: Deploy to Cloud Run
     entrypoint: gcloud
-    # env:
-    #   - _CHAT_WEBHOOK_URL=${_CHAT_WEBHOOK_URL}
-    #   - _ENVIRONMENT=${_ENVIRONMENT}
-    #   - _SERVICE_NAME=${_SERVICE_NAME}
-    #   - _ARTIFACT_REPO=${_ARTIFACT_REPO}
-    #   - _REGION=${_REGION}
-    #   - REPO_NAME=${REPO_NAME}
-    #   - REPO_FULL_NAME=${REPO_FULL_NAME}
-    #   - BUILD_ID=${BUILD_ID}
-    #   - PROJECT_ID=${PROJECT_ID}
-    #   - BRANCH_NAME=${BRANCH_NAME}
-    #   - SHORT_SHA=${SHORT_SHA}
-    #   - LOCATION=${LOCATION}
     args: [
       'run',
       'deploy',
