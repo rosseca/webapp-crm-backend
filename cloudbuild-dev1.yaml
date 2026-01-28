@@ -28,7 +28,7 @@ steps:
       - '-c'
       - |-
         set -e
-        gcloud run deploy ${_SERVICE} \
+        gcloud run deploy ${_SERVICE_NAME} \
           --image gcr.io/${PROJECT_ID}/${_SERVICE_NAME}:latest \
           --region ${_REGION} \
           --platform managed \
