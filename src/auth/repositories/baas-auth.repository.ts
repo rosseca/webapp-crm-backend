@@ -61,10 +61,14 @@ export class BaasAuthRepository implements IAuthRepository {
       'FIREBASE_WEB_API_KEY',
       '',
     );
-    this.baasApiUrl = this.configService.get<string>(
+    const baseUrl = this.configService.get<string>(
       'CHATAI_API_URL',
       'https://test.api.aichatapp.ai',
     );
+    // Ensure baseUrl includes /v1 for the BaaS API versioned endpoints
+    this.baasApiUrl = baseUrl.endsWith('/v1')
+      ? baseUrl
+      : `${baseUrl.replace(/\/$/, '')}/v1`;
   }
 
   async register(_dto: RegisterDto): Promise<AuthResult> {
@@ -204,24 +208,32 @@ export class BaasAuthRepository implements IAuthRepository {
     return true;
   }
 
-  async getUserById(userId: string): Promise<Auth | null> {
+  async getUserById(userId: string, token?: string): Promise<Auth | null> {
     try {
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await firstValueFrom(
-        this.httpService.get(`${this.baasApiUrl}/users/${userId}`),
+        this.httpService.get(`${this.baasApiUrl}/users/${userId}`, {
+          headers,
+        }),
       );
 
-      const userData = response.data;
+      // Handle the BaaS API response format: { success: true, data: {...} }
+      const responseData = response.data?.data || response.data;
       const auth = new Auth();
-      auth.id = userData.id;
-      auth.email = userData.email;
-      auth.firstName = userData.name?.split(' ')[0] || '';
-      auth.lastName = userData.name?.split(' ').slice(1).join(' ') || '';
-      auth.role = userData.role || 'admin'; // Default role for BAAS users
-      auth.createdAt = userData.created_at
-        ? new Date(userData.created_at)
+      auth.id = responseData.id;
+      auth.email = responseData.email;
+      auth.firstName = responseData.name?.split(' ')[0] || '';
+      auth.lastName = responseData.name?.split(' ').slice(1).join(' ') || '';
+      auth.role = responseData.role || 'admin'; // Default role for BAAS users
+      auth.createdAt = responseData.created_at
+        ? new Date(responseData.created_at)
         : new Date();
-      auth.updatedAt = userData.updated_at
-        ? new Date(userData.updated_at)
+      auth.updatedAt = responseData.updated_at
+        ? new Date(responseData.updated_at)
         : new Date();
 
       return auth;

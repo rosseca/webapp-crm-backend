@@ -29,6 +29,30 @@ export class ListTransactionsDto {
 
   @IsOptional()
   @IsString()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  id_transaction?: string;
+
+  @IsOptional()
+  @IsString()
+  order_number?: string;
+
+  @IsOptional()
+  @IsString()
+  bin?: string;
+
+  @IsOptional()
+  @IsString()
+  last_4?: string;
+
+  @IsOptional()
+  @IsString()
+  card_holder_name?: string;
+
+  @IsOptional()
+  @IsString()
   customer_id?: string;
 
   @IsOptional()
@@ -37,7 +61,7 @@ export class ListTransactionsDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(['payment', 'refund'])
+  @IsIn(['payment', 'refund', 'chargeback', 'rdr'])
   transaction_type?: string;
 
   @IsOptional()

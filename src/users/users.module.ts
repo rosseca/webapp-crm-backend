@@ -9,13 +9,18 @@ import { ApiRepositoryConfig } from '../common/repositories/base-api.repository'
 
 const ChatAIApiConfigProvider = {
   provide: CHATAI_API_CONFIG,
-  useFactory: (configService: ConfigService): ApiRepositoryConfig => ({
-    baseUrl: configService.get<string>('CHATAI_API_URL') || 'http://localhost:5001',
-    timeout: configService.get<number>('CHATAI_API_TIMEOUT') || 10000,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  }),
+  useFactory: (configService: ConfigService): ApiRepositoryConfig => {
+    const baseUrl = configService.get<string>('CHATAI_API_URL') || 'http://localhost:5001';
+    // Ensure baseUrl includes /v1 for the BaaS API versioned endpoints
+    const normalizedUrl = baseUrl.endsWith('/v1') ? baseUrl : `${baseUrl.replace(/\/$/, '')}/v1`;
+    return {
+      baseUrl: normalizedUrl,
+      timeout: configService.get<number>('CHATAI_API_TIMEOUT') || 10000,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+  },
   inject: [ConfigService],
 };
 

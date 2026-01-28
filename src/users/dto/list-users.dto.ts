@@ -32,6 +32,10 @@ export class ListUsersDto {
   email?: string;
 
   @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   email_verified?: boolean;
@@ -40,6 +44,21 @@ export class ListUsersDto {
   @IsString()
   @IsIn(['Google', 'Facebook', 'Apple', 'Email'])
   loginWith?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['free', 'pro'])
+  user_type?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['N/A', 'Active', 'Unsubscribe', 'No renewal'])
+  subscription_status?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['1', '3', '12'])
+  subscription_type?: string;
 
   @IsOptional()
   @IsString()

@@ -16,6 +16,17 @@ export class User {
   language_registration?: string;
   created_at: string | null;
   updated_at: string | null;
+  // New fields
+  customer_id_np?: string;
+  status?: string;
+  unsubscribed_date?: string | null;
+  renewal_date?: string | null;
+  retries?: number;
+  first_transaction_date?: string | null;
+  user_type?: 'free' | 'pro';
+  subscription_status?: 'N/A' | 'Active' | 'Unsubscribe' | 'No renewal';
+  subscription_type?: '1' | '3' | '12';
+  provider?: 'stripe' | 'macropay';
 }
 
 export class PaginatedUsers {

@@ -113,7 +113,18 @@ export abstract class BaseApiRepository {
         ),
       );
 
-      return response.data;
+      // Handle BaaS API response format: { success: true, data: {...} }
+      const responseData = response.data;
+      if (
+        responseData &&
+        typeof responseData === 'object' &&
+        'success' in responseData &&
+        'data' in responseData
+      ) {
+        return (responseData as { success: boolean; data: T }).data;
+      }
+
+      return responseData;
     } catch (error) {
       if (error instanceof RepositoryException) {
         throw error;

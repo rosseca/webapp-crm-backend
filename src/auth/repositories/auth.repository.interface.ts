@@ -9,7 +9,7 @@ export interface IAuthRepository {
   verifyToken(token: string): Promise<TokenVerificationResult>;
   refreshToken(refreshToken: string): Promise<TokenRefreshResult>;
   revokeToken(token: string): Promise<boolean>;
-  getUserById(userId: string): Promise<Auth | null>;
+  getUserById(userId: string, token?: string): Promise<Auth | null>;
 }
 
 export interface AuthResult {

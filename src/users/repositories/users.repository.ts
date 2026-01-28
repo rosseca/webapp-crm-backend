@@ -35,9 +35,15 @@ export class UsersRepository
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.search) queryParams.append('search', params.search);
     if (params.email) queryParams.append('email', params.email);
+    if (params.name) queryParams.append('name', params.name);
     if (params.email_verified !== undefined)
       queryParams.append('email_verified', params.email_verified.toString());
     if (params.loginWith) queryParams.append('loginWith', params.loginWith);
+    if (params.user_type) queryParams.append('user_type', params.user_type);
+    if (params.subscription_status)
+      queryParams.append('subscription_status', params.subscription_status);
+    if (params.subscription_type)
+      queryParams.append('subscription_type', params.subscription_type);
     if (params.sortBy) queryParams.append('sortBy', params.sortBy);
     if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 

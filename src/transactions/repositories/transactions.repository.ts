@@ -31,6 +31,15 @@ export class TransactionsRepository
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.search) queryParams.append('search', params.search);
+    if (params.email) queryParams.append('email', params.email);
+    if (params.id_transaction)
+      queryParams.append('id_transaction', params.id_transaction);
+    if (params.order_number)
+      queryParams.append('order_number', params.order_number);
+    if (params.bin) queryParams.append('bin', params.bin);
+    if (params.last_4) queryParams.append('last_4', params.last_4);
+    if (params.card_holder_name)
+      queryParams.append('card_holder_name', params.card_holder_name);
     if (params.customer_id) queryParams.append('customer_id', params.customer_id);
     if (params.subscription_id)
       queryParams.append('subscription_id', params.subscription_id);
