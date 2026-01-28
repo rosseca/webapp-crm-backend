@@ -1,3 +1,4 @@
+serviceAccount: projects/${PROJECT_ID}/serviceAccounts/cloudbuild-builder-sa@${PROJECT_ID}.iam.gserviceaccount.com
 steps:
   # Step 0: Build App Docker image (using GCR instead of Artifact Registry)
   - name: 'gcr.io/cloud-builders/docker'
